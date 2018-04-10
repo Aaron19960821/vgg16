@@ -1,7 +1,11 @@
+#!coding=utf-8
+
 import tensorflow as tf
 import numpy as np
 import json
 import utils
+import cv2
+import time
 
 class Vgg16:
 
@@ -20,21 +24,60 @@ class Vgg16:
         self.batchsize = int(data['batchsize'])
         self.batches = int(data['batches'])
         self.channel = int(data['channel'])
+        self.classes = int(data['classes'])
+
+        self.trainList = str(data['trainlist'])
+        self.labelList = str(data['labelList'])
+        
 
     def loadWithTrainedJson(self, jsonFile):
     # Todo: load train information with a JSON file
         self.trained = True
 
+    def train(self, tgtDir):
+        init = tf.global_variables_initializer()
+
+        trainSet = open(self.trainList).readlines()
+        initlabel = open(self.labelList).readlines()
+        label = [int(x) for x in initlabel]
+
+        with tf.Session() as sess:
+            sess.run(init)
+            for i in range(self.batches):
+                startTime = time.time()
+                imageSet = utils.randomChoose(trainSet, self.batchsize)
+                x = utils.loadImagesFromFile(imageSet, self.width, self.height)
+                imageLabel = utils.getLabels(trainSet, imageSet, label)
+
+                y = []
+                for i in range self.batchsize:
+                    y.append([1 if x==imageLabel[i]] else 0 for x in range(self.classes))
+                sess.run(self.optimizer, feed_dict={
+                    self.x: x,
+                    self.y: np.array(y)
+                    })
+                endTime = time.time()
+
+                print("Batch #{} processing time {}, loss={}", i+1, endTime-startTime, self.loss)
+
+            self.saveAll()
+
+
+
+
+
+        
+
     # Build the basic structure of network
     def buildNet(self):
-        x = tf.placeholder(tf.float32, shape = (None, self.width, self.height, self.channel), name= 'input_layer')
-        y = tf.placeholder(tf.int32, shape = (None, self.classes), name = 'labels')
+        self.x = tf.placeholder(tf.float32, shape = (None, self.width, self.height, self.channel), name= 'input_layer')
+        self.y = tf.placeholder(tf.int32, shape = (None, self.classes), name = 'labels')
 
         # Conv1
         with tf.name_scope('conv1_1') as scope:
             kernel = self.getWeight([3,3,3,64])
             bias = self.getBias([64])
-            conv1_1 = tf.nn.relu(self.con2d(x, kernel)+bias, name = scope)
+            conv1_1 = tf.nn.relu(self.con2d(self.x, kernel)+bias, name = scope)
 
         with tf.name_scope('conv1_2') as scope:
             kernel = self.getWeight([3,3,64,64])
