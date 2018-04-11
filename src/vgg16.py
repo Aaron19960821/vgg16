@@ -39,7 +39,7 @@ class Vgg16:
 
     def train(self, tgtDir):
         self.buildNet()
-        init = tf.initialize_all_variables()
+        init = tf.global_variables_initializer()
 
         trainSet = open(self.trainList).readlines()
         initlabel = open(self.labelList).readlines()
@@ -61,14 +61,16 @@ class Vgg16:
                     self.y: y
                     })
                 endTime = time.time()
-                #curLoss = sess.run(self.loss)
-                curLoss = 0.0
 
-                print("Batch %d processing time %.2f, loss=%.5f"%(batchIndex+1, endTime-startTime, curLoss))
+                curLoss = sess.run(self.loss, feed_dict={
+                    self.x: x,
+                    self.y: y
+                    })
+                print("Batch #%d processing time %.2fs, loss = %.5f"%(batchIndex+1, endTime-startTime, curLoss))
 
             weightsFile = os.path.join(tgtDir, 'model.weights')
             saver = tf.train.Saver()
-            print("Model saved in {}", weightsFile)
+            print("Model saved in %s"%(weightsFile))
             saver.save(sess, weightsFile)
             self.saveAll(tgtDir)
 
@@ -97,107 +99,109 @@ class Vgg16:
         with tf.name_scope('conv1_1') as scope:
             kernel = self.getWeight([3,3,3,64])
             bias = self.getBias([64])
-            conv1_1 = tf.nn.relu(self.con2d(self.x, kernel)+bias, name = scope)
+            self.conv1_1 = tf.nn.relu(self.con2d(self.x, kernel)+bias, name = scope)
 
         with tf.name_scope('conv1_2') as scope:
             kernel = self.getWeight([3,3,64,64])
             bias = self.getBias([64])
-            conv1_2 = tf.nn.relu(self.con2d(conv1_1, kernel)+bias, name = scope)
+            self.conv1_2 = tf.nn.relu(self.con2d(self.conv1_1, kernel)+bias, name = scope)
 
-        maxpool1 = tf.nn.max_pool(conv1_2, ksize=[1,2,2,1], strides=[1,2,2,1], padding='SAME', name='maxpool1')
+        self.maxpool1 = tf.nn.max_pool(self.conv1_2, ksize=[1,2,2,1], strides=[1,2,2,1], padding='SAME', name='maxpool1')
 
         with tf.name_scope('conv2_1') as scope:
             kernel = self.getWeight([3,3,64,128])
             bias = self.getBias([128])
-            conv2_1 = tf.nn.relu(self.con2d(maxpool1,kernel)+bias, name=scope)
+            self.conv2_1 = tf.nn.relu(self.con2d(self.maxpool1,kernel)+bias, name=scope)
 
         with tf.name_scope('conv2_2') as scope:
             kernel = self.getWeight([3,3,128,128])
             bias = self.getBias([128])
-            conv2_2 = tf.nn.relu(self.con2d(conv2_1, kernel)+bias, name=scope)
+            self.conv2_2 = tf.nn.relu(self.con2d(self.conv2_1, kernel)+bias, name=scope)
 
-        maxpool2 = tf.nn.max_pool(conv2_2, ksize=[1,2,2,1], strides=[1,2,2,1], padding='SAME', name='maxpool2')
+        self.maxpool2 = tf.nn.max_pool(self.conv2_2, ksize=[1,2,2,1], strides=[1,2,2,1], padding='SAME', name='maxpool2')
 
         # conv3
         with tf.name_scope('conv3_1') as scope:
             kernel = self.getWeight([3, 3, 128, 256])
             bias = self.getBias([256])
-            conv3_1 = tf.nn.relu(self.con2d(maxpool2, kernel) + bias, name=scope)
+            self.conv3_1 = tf.nn.relu(self.con2d(self.maxpool2, kernel) + bias, name=scope)
 
         with tf.name_scope('conv3_2') as scope:
             kernel = self.getWeight([3, 3, 256, 256])
             bias = self.getBias([256])
-            conv3_2 = tf.nn.relu(self.con2d(conv3_1, kernel) + bias, name=scope)
+            self.conv3_2 = tf.nn.relu(self.con2d(self.conv3_1, kernel) + bias, name=scope)
 
         with tf.name_scope('conv3_3') as scope:
             kernel = self.getWeight([3, 3, 256, 256])
             bias = self.getBias([256])
-            conv3_3 = tf.nn.relu(self.con2d(conv3_2, kernel) + bias, name=scope)
+            self.conv3_3 = tf.nn.relu(self.con2d(self.conv3_2, kernel) + bias, name=scope)
 
-        maxpool3 = tf.nn.max_pool(conv3_3, ksize=[1,2,2,1], strides=[1,2,2,1], padding='SAME', name='maxpool3')
+        self.maxpool3 = tf.nn.max_pool(self.conv3_3, ksize=[1,2,2,1], strides=[1,2,2,1], padding='SAME', name='maxpool3')
 
         # conv4
         with tf.name_scope('conv4_1') as scope:
             kernel = self.getWeight([3, 3, 256, 512])
             bias = self.getBias([512])
-            conv4_1 = tf.nn.relu(self.con2d(maxpool3, kernel) + bias, name=scope)
+            self.conv4_1 = tf.nn.relu(self.con2d(self.maxpool3, kernel) + bias, name=scope)
 
         with tf.name_scope('conv4_2') as scope:
             kernel = self.getWeight([3, 3, 512, 512])
             bias = self.getBias([512])
-            conv4_2 = tf.nn.relu(self.con2d(conv4_1, kernel) + bias, name=scope)
+            self.conv4_2 = tf.nn.relu(self.con2d(self.conv4_1, kernel) + bias, name=scope)
 
         with tf.name_scope('conv4_3') as scope:
             kernel = self.getWeight([3, 3, 512, 512])
             bias = self.getBias([512])
-            conv4_3 = tf.nn.relu(self.con2d(conv4_2, kernel) + bias, name=scope)
+            self.conv4_3 = tf.nn.relu(self.con2d(self.conv4_2, kernel) + bias, name=scope)
 
-        maxpool4 = tf.nn.max_pool(conv4_3, ksize=[1,2,2,1], strides=[1,2,2,1], padding='SAME', name='maxpool4')
-
+        self.maxpool4 = tf.nn.max_pool(self.conv4_3, ksize=[1,2,2,1], strides=[1,2,2,1], padding='SAME', name='maxpool4')
 
         # conv5
         with tf.name_scope('conv5_1') as scope:
             kernel = self.getWeight([3, 3, 512, 512])
             bias = self.getBias([512])
-            conv5_1 = tf.nn.relu(self.con2d(maxpool4, kernel) + bias, name=scope)
+            self.conv5_1 = tf.nn.relu(self.con2d(self.maxpool4, kernel) + bias, name=scope)
 
         with tf.name_scope('conv5_2') as scope:
             kernel = self.getWeight([3, 3, 512, 512])
             bias = self.getBias([512])
-            conv5_2 = tf.nn.relu(self.con2d(conv5_1, kernel) + bias, name=scope)
+            self.conv5_2 = tf.nn.relu(self.con2d(self.conv5_1, kernel) + bias, name=scope)
 
         with tf.name_scope('conv5_3') as scope:
             kernel = self.getWeight([3, 3, 512, 512])
             bias = self.getBias([512])
-            conv5_3 = tf.nn.relu(self.con2d(conv5_2, kernel) + bias, name=scope)
+            self.conv5_3 = tf.nn.relu(self.con2d(self.conv5_2, kernel) + bias, name=scope)
 
-        maxpool5 = tf.nn.max_pool(conv5_3, ksize=[1,2,2,1], strides=[1,2,2,1], padding='SAME', name='maxpool5')
+        self.maxpool5 = tf.nn.max_pool(self.conv5_3, ksize=[1,2,2,1], strides=[1,2,2,1], padding='SAME', name='maxpool5')
 
         #fc6
         with tf.name_scope('fc6') as scope:
-            shape = int(np.prod(maxpool5.get_shape()[1:]))
+            shape = int(np.prod(self.maxpool5.get_shape()[1:]))
             kernel = self.getWeight([shape, 4096])
             bias = self.getBias([4096])
-            pool5_flat = tf.reshape(maxpool5, [-1, shape])
-            output_fc6 = tf.nn.relu(tf.matmul(pool5_flat, kernel)+bias, name=scope)
+            pool5_flat = tf.reshape(self.maxpool5, [-1, shape])
+            fc6_dropout = tf.nn.dropout(pool5_flat, 0.5)
+            self.fc6 = tf.nn.relu(tf.matmul(fc6_dropout, kernel)+bias, name=scope)
 
         #fc7
         with tf.name_scope('fc7') as scope:
             kernel = self.getWeight([4096, 4096])
             bias = self.getBias([4096])
-            output_fc7 = tf.nn.relu(tf.matmul(output_fc6, kernel)+bias, name=scope)
+            fc7_dropout = tf.nn.dropout(self.fc6, 0.5)
+            self.fc7 = tf.nn.relu(tf.matmul(fc7_dropout, kernel)+bias, name=scope)
 
         #fc8
         with tf.name_scope('fc8') as scope:
             kernel = self.getWeight([4096, self.classes])
             bias = self.getBias([self.classes])
-            output_fc8 = tf.nn.relu(tf.matmul(output_fc7, kernel)+bias, name=scope)
+            self.fc8 = tf.nn.relu(tf.matmul(self.fc7, kernel)+bias, name=scope)
 
-        finaloutput = tf.nn.softmax(output_fc8, name="softmax")
+        self.finaloutput = tf.nn.softmax(self.fc8, name="softmax")
         
-        self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=finaloutput, labels=self.y))
+        self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.finaloutput, labels=self.y))
 
-        self.optimizer = tf.train.MomentumOptimizer(self.learningRate, self.momentum, name='optimizer').minimize(self.loss)
+        #self.optimizer = tf.train.MomentumOptimizer(self.learningRate, self.momentum, name='optimizer').minimize(self.loss)
+        self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learningRate).minimize(self.loss)
 
         return
 
@@ -208,8 +212,8 @@ class Vgg16:
 
     def getWeight(self, shape, name='weight'):
         init = tf.truncated_normal(shape=shape, stddev=0.1)
-        return tf.Variable(init, name=name)
+        return tf.Variable(init, name=name, trainable=True)
 
     def getBias(self, shape, name='bias'):
         init = tf.truncated_normal(shape=shape, stddev=0.1)
-        return tf.Variable(init, name=name)
+        return tf.Variable(init, name=name, trainable=True)
