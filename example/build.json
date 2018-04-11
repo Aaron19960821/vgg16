@@ -1,0 +1,11 @@
+{
+	"learning_rate":0.001,
+	"momentum":0.9,
+	"batchsize":8,
+	"batches":70,
+	"channel":3,
+	"classes":2,
+	"classnamelist":"labels.txt",
+	"trainlist":"train.txt",
+	"labellist":"labellist.txt"
+}
