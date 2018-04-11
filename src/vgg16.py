@@ -62,7 +62,6 @@ class Vgg16:
                     })
                 endTime = time.time()
                 #curLoss = sess.run(self.loss)
-                curLoss = 0.0
 
                 print("Batch %d processing time %.2f, loss=%.5f"%(batchIndex+1, endTime-startTime, curLoss))
 
