@@ -1,4 +1,5 @@
-#!coding=utf-8
+import sys
+sys.path.append('/usr/local/lib/python2.7/site-packages')
 
 import tensorflow as tf
 import numpy as np
@@ -20,9 +21,9 @@ def randomChoose(imageSet, number):
 def loadImagesFromFile(imageSet, width, height):
     res = []
     for image in imageSet:
-        preImage = cv2.imread(image)
-        postImage = cv2.resize(preImage, (width, height), interpolation=cv2.INTER_CUBIC)
-        res.append(res)
+        im1 = cv2.imread(image.strip('\n'))
+        im2 = cv2.resize(im1, (width, height), interpolation=cv2.INTER_CUBIC)
+        res.append(im2)
 
     return np.array(res)
 
