@@ -197,6 +197,7 @@ class Vgg16:
             self.fc8 = tf.nn.relu(tf.matmul(self.fc7, kernel)+bias, name=scope)
 
         self.finaloutput = tf.nn.softmax(self.fc8, name="softmax")
+        print self.finaloutput.shape
         
         self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.finaloutput, labels=self.y))
 
