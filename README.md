@@ -54,3 +54,29 @@ def main():
 if __name__ == '__main__':
     main()
 ```
+
+### Predict
+
+We provide a predict API to predict from a image list. The API is shown below:  
+
+```python
+def predict(self, tgtDir, imageListFile)
+```
+
+Before you use the model to predict, the model should be loaded with the following API:  
+
+```python
+def loadWithTrainedJson(self, modelDir)
+```
+
+The **modelDir** contains the model trained with this project or created 
+by the users themselves.  
+
+The **imageListFile** is the list of images to be predicted. Each line of the file contains an 
+address of an image(we encourage absolute address).  
+
+At last, the result will dump to **result.txt** to **tgtDir**.  
+
+### More
+
+Further question, please contact **wyc8094@gmail.com**

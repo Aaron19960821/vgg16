@@ -16,7 +16,6 @@ class Vgg16:
         self.params = []
 
     def loadWithUntrainedJson(self, srcDir):
-    # Todo: load train information with a JSON file
         jsonFile = os.path.join(srcDir, "build.json")
         data = utils.readJsonFromFile(jsonFile)
 
@@ -26,6 +25,7 @@ class Vgg16:
         self.batches = int(data['batches'])
         self.channel = int(data['channel'])
         self.classes = int(data['classes'])
+        self.srcDir = srcDir
 
         self.trainList = os.path.join(srcDir, str(data['trainlist']))
         self.labelList = os.path.join(srcDir,str(data['labellist']))
@@ -33,9 +33,53 @@ class Vgg16:
         self.loaded = True
         
 
-    def loadWithTrainedJson(self, jsonFile):
-    # Todo: load train information with a JSON file
-        self.trained = True
+    def loadWithTrainedJson(self, modelDir):
+        jsonFile = os.path.join(modelDir, "model.json")
+        data = utils.readJsonFromFile(jsonFile)
+
+        self.learningRate = float(data['learning_rate'])
+        self.momentum = float(data['momentum'])
+        self.batchsize = int(data['batchsize'])
+        self.batches = int(data['batches'])
+        self.channel = int(data['channel'])
+        self.classes = int(data['classes'])
+        self.modelDir = modelDir
+
+        self.classnameList = str(data['classnamelist'])
+        self.loaded = True
+
+    def loadWeights(self, sess):
+        weightFile = os.path.join(self.modelDir, "model.npy")
+        param = np.load(weightFile)
+        for key, value in emumerate(self.params):
+            sess.run(self.params.assign(param[key].assign(param[key])))
+
+    def predict(self, tgtDir, picListFile):
+        picList = open(picListFile).writelines()
+        self.buildNet()
+        init = tf.global_variables_initializer()
+
+        classnameListFile = os.path.join(self.modelDir, self.classnameList)
+        labelList = [ classname.strip('\n') for classname in open(classnameListFile).writelines()]
+
+        resultFile = open(os.path.join(tgtDir, "result.txt"), 'w')
+
+        with tf.Session() as sess:
+            sess.run(init)
+            loadWeights(sess)
+            for pic in picList:
+                image = utils.loadImagesFromFile([pic], self.width, self.height)
+                finaloutput = sess.run(self.finaloutput, feed_dict={
+                    self.x: image,
+                    self.y: [[0]]
+                    })
+                label = sess.run(self.prediction, feed_dict={
+                    self.x: image,
+                    self.y: [[0]]
+                    })
+                resultFile.write(pic + ' ' + label[0] + ' ' + labelList[label[0]] + ' ' + ' '.join([str(p) for p in finaloutput]))
+        resultFile.close()
+        return
 
     def train(self, tgtDir):
         self.buildNet()
@@ -80,24 +124,31 @@ class Vgg16:
                             correctImage += 1
                     print("Valid in step %d: recall: %.5f"%(batchIndex+1, correctImage/self.batchsize))
 
+                # save weights to file
+                if batchIndex % 50 == 0:
+                    self.saveWeights(tgtDir)
+
 
             self.saveAll(tgtDir)
 
-    def predict(self, imageListFile):
-
     def saveAll(self, tgtDir):
-        #generate json file
         modelJson = {}
-        modelJson['width'] = self.width
-        modelJson['height'] = self.height
+        modelJson['momentum'] = self.momentum
+        modelJson['channel'] = self.channel
         modelJson['batches'] = self.batches
         modelJson['batchsize'] = self.batchsize
-        modelJson['learningRate'] = self.learningRate
+        modelJson['learning_rate'] = self.learningRate
         modelJson['classes'] = self.classes
-        modelJson['classnameList'] = self.classnameList
+        modelJson['classnamelist'] = self.classnameList
+        modelJson['weightsfile'] = 'model.npy'
         jsonFile = os.path.join(tgtDir, 'model.json')
         json.dump(modelJson, open(jsonFile, 'w'))
 
+        self.saveWeights(tgtDir)
+        return
+        
+    # Save weights to the file
+    def saveWeights(self, tgtDir):
         modelFile = os.path.join(tgtDir, 'model.npy')
         param = []
         for each in self.params:
@@ -105,7 +156,6 @@ class Vgg16:
         param = np.array(param)
         np.save(modelFile, param)
         return
-        
 
     # Build the basic structure of network
     def buildNet(self):
@@ -232,8 +282,8 @@ class Vgg16:
         self.finaloutput = tf.nn.softmax(self.fc8, name="softmax")
         
         self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.finaloutput, labels=self.y))
-        #self.optimizer = tf.train.MomentumOptimizer(self.learningRate, self.momentum, name='optimizer').minimize(self.loss)
-        self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learningRate).minimize(self.loss)
+        self.optimizer = tf.train.MomentumOptimizer(self.learningRate, self.momentum, name='optimizer').minimize(self.loss)
+        #self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learningRate).minimize(self.loss)
         self.prediction = tf.argmax(self.finaloutput, axis=1, name='predictions')
 
         return
